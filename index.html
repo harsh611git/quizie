@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verified Assessment Portal</title>
+    <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
+    <style>
+        :root { --primary: #2563eb; --success: #16a34a; --dark: #1e293b; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        .hidden { display: none; }
+        
+        /* Typography & Inputs */
+        h2 { color: var(--dark); margin-bottom: 1.5rem; }
+        input { width: 100%; padding: 12px; margin: 8px 0 16px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 1rem; }
+        
+        /* Buttons */
+        button { padding: 12px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-outline { background: white; border: 1px solid var(--primary); color: var(--primary); flex: 1; }
+        .btn-outline.active { background: var(--primary); color: white; }
+
+        /* Quiz UI */
+        .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-family: monospace; }
+        .options-grid { display: grid; gap: 10px; margin: 20px 0; }
+        .option-btn { background: white; border: 2px solid #e2e8f0; text-align: left; padding: 15px; border-radius: 8px; }
+        .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        .nav-controls { display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        .report-table th, .report-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <!-- 1. ENTRANCE SCREEN (Login/Guest) -->
+    <div id="entrance-screen">
+        <h2 id="portal-title">Assessment Portal</h2>
+        <div class="btn-group">
+            <button id="mode-guest" class="btn-outline active" onclick="setMode('guest')">Guest Access</button>
+            <button id="mode-login" class="btn-outline" onclick="setMode('login')">User Login</button>
+        </div>
+
+        <div id="login-fields" class="hidden">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e2e8f0;">
+        
+        <label><b>Test Identity:</b></label>
+        <input type="text" id="test-name" placeholder="e.g. Physics Midterm">
+        
+        <label><b>Questions:</b></label>
+        <input type="number" id="num-input" value="5" min="1">
+        
+        <button class="btn-primary" onclick="validateAndStart()">INITIALIZE TEST</button>
+    </div>
+
+    <!-- 2. QUIZ SCREEN -->
+    <div id="quiz-screen" class="hidden">
+        <div class="timer-bar">
+            <span>Q-Time: <b id="q-clock" style="color:#fbbf24">0</b>s</span>
+            <span>Total: <b id="g-clock">00:00</b></span>
+        </div>
+        <h4 id="display-test-name" style="margin:0; color:var(--primary)"></h4>
+        <h3 id="progress-text">Question 1</h3>
+        
+        <div class="options-grid">
+            <button class="option-btn" id="opt-A" onclick="selectOption('A')">A</button>
+            <button class="option-btn" id="opt-B" onclick="selectOption('B')">B</button>
+            <button class="option-btn" id="opt-C" onclick="selectOption('C')">C</button>
+            <button class="option-btn" id="opt-D" onclick="selectOption('D')">D</button>
+            <button class="option-btn" id="opt-E" onclick="selectOption('E')">E</button>
+        </div>
+
+        <div class="nav-controls">
+            <button onclick="goBack()" style="background:#64748b; color:white;">Previous</button>
+            <button onclick="goForward()" id="next-btn" style="background:var(--success); color:white;">Next</button>
+        </div>
+    </div>
+
+    <!-- 3. VERIFICATION SCREEN -->
+    <div id="verify-screen" class="hidden">
+        <h2>Submit & Verify</h2>
+        <p>Test <b><span id="finish-test-name"></span></b> submitted.</p>
+        <div style="border: 2px dashed var(--primary); padding: 20px; border-radius: 10px; background: #eff6ff; text-align: center;">
+            <input type="file" id="image-input" accept="image/*">
+            <button onclick="processImage()" style="background:var(--dark); color:white; margin-top:15px; width:100%;">SCAN SHEET & SEE RESULTS</button>
+            <div id="ai-loading" class="hidden" style="margin-top:10px; color:var(--primary); font-weight:bold;">Reading Handwriting...</div>
+        </div>
+    </div>
+
+    <!-- 4. FINAL REPORT -->
+    <div id="report-screen" class="hidden">
+        <h2 id="final-title"></h2>
+        <div id="user-info" style="margin-bottom: 10px; font-weight: bold; color: #64748b;"></div>
+        <div id="report-summary"></div>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Q#</th>
+                    <th>Manual</th>
+                    <th>AI Scan</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="report-body"></tbody>
+        </table>
+        <button onclick="location.reload()" style="width:100%; margin-top:20px; background:var(--dark); color:white;">End Session</button>
+    </div>
+</div>
+
+<script>
+    let mode = 'guest';
+    let testTitle = "";
+    let totalQs = 0, currentIndex = 0;
+    let userAnswers = [], timeLogs = [];
+    let gSecs = 0, qSecs = 0;
+    let gInt, qInt;
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('mode-guest').classList.toggle('active', m === 'guest');
+        document.getElementById('mode-login').classList.toggle('active', m === 'login');
+        document.getElementById('login-fields').classList.toggle('hidden', m === 'guest');
+    }
+
+    function validateAndStart() {
+        if (mode === 'login') {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user !== "admin" || pass !== "1234") { // Dummy login
+                alert("Invalid Login! (Use admin/1234)");
+                return;
+            }
+        }
+
+        testTitle = document.getElementById('test-name').value || "Untitled Assessment";
+        totalQs = parseInt(document.getElementById('num-input').value);
+        
+        userAnswers = Array(totalQs).fill("-");
+        timeLogs = Array(totalQs).fill(0);
+        
+        document.getElementById('entrance-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        document.getElementById('display-test-name').innerText = testTitle;
+        
+        startSystem();
+    }
+
+    function startSystem() {
+        gInt = setInterval(() => {
+            gSecs++;
+            let m = Math.floor(gSecs/60).toString().padStart(2,'0');
+            let s = (gSecs%60).toString().padStart(2,'0');
+            document.getElementById('g-clock').innerText = `${m}:${s}`;
+        }, 1000);
+
+        qInt = setInterval(() => {
+            qSecs++;
+            document.getElementById('q-clock').innerText = qSecs;
+        }, 1000);
+
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        document.getElementById('progress-text').innerText = `Question ${currentIndex + 1} of ${totalQs}`;
+        document.getElementById('next-btn').innerText = (currentIndex === totalQs - 1) ? "SUBMIT" : "Next";
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        if(userAnswers[currentIndex] !== "-") document.getElementById(`opt-${userAnswers[currentIndex]}`).classList.add('selected');
+    }
+
+    function selectOption(l) { userAnswers[currentIndex] = l; loadQuestion(); }
+
+    function goForward() {
+        timeLogs[currentIndex] += qSecs;
+        qSecs = 0; // RESET
+        if (currentIndex < totalQs - 1) { currentIndex++; loadQuestion(); } 
+        else { 
+            clearInterval(gInt); clearInterval(qInt);
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('verify-screen').classList.remove('hidden');
+            document.getElementById('finish-test-name').innerText = testTitle;
+        }
+    }
+
+    function goBack() {
+        timeLogs[currentIndex] += qSecs;
+        qSecs = 0; // RESET
+        if (currentIndex > 0) { currentIndex--; loadQuestion(); }
+    }
+
+    async function processImage() {
+        const file = document.getElementById('image-input').files[0];
+        if (!file) return alert("Select photo first.");
+        document.getElementById('ai-loading').classList.remove('hidden');
+
+        Tesseract.recognize(file, 'eng').then(({ data: { text } }) => {
+            const aiMatches = text.match(/[A-E]/g) || [];
+            showFinal(aiMatches);
+        });
+    }
+
+    function showFinal(aiArr) {
+        document.getElementById('verify-screen').classList.add('hidden');
+        document.getElementById('report-screen').classList.remove('hidden');
+        document.getElementById('final-title').innerText = "Report: " + testTitle;
+        document.getElementById('user-info').innerText = (mode === 'guest') ? "Logged as: Guest" : `Logged as: ${document.getElementById('username').value}`;
+
+        let rows = "";
+        userAnswers.forEach((ans, i) => {
+            rows += `<tr><td>${i+1}</td><td>${ans}</td><td>${aiArr[i] || '-'}</td><td>${timeLogs[i]}s</td></tr>`;
+        });
+        document.getElementById('report-body').innerHTML = rows;
+    }
+</script>
+
+</body>
+</html>
