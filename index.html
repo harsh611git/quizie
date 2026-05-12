@@ -12,47 +12,49 @@
         .hidden { display: none; }
         
         h2 { color: var(--dark); margin-bottom: 1rem; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+        input { width: 100%; padding: 12px; margin: 8px 0 16px 0; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
         
-        /* Buttons */
         button { padding: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 15px; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-primary:hover { background: #1d4ed8; }
+        .btn-outline { background: white; border: 1px solid var(--primary); color: var(--primary); width: 48%; margin-bottom: 10px;}
+        .btn-outline.active { background: var(--primary); color: white; }
         
-        /* Quiz Interface */
-        .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 25px; font-family: 'Courier New', monospace; }
+        .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 25px; font-family: monospace; }
         .q-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: var(--dark); }
         .options-grid { display: grid; gap: 12px; margin-bottom: 25px; }
-        .option-btn { background: white; border: 2px solid #f1f5f9; text-align: left; padding: 16px; border-radius: 10px; transition: 0.3s; color: var(--dark); }
-        .option-btn:hover { border-color: var(--primary); background: #eff6ff; }
+        .option-btn { background: white; border: 2px solid #f1f5f9; text-align: left; padding: 16px; border-radius: 10px; transition: 0.3s; }
         .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
         
         .nav-controls { display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 25px; }
         .btn-nav { width: 48%; background: #64748b; color: white; }
         .btn-next { background: var(--success); }
 
-        /* Report Table */
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; }
-        .report-table th { background: #f1f5f9; color: #475569; padding: 12px; }
-        .report-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; }
-        .match-status { font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-        .status-yes { background: #dcfce7; color: #166534; }
-        .status-no { background: #fee2e2; color: #991b1b; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .report-table th, .report-table td { padding: 12px; border: 1px solid #f1f5f9; text-align: center; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div id="setup-screen">
-        <h2>Quiz Portal</h2>
-        <label><b>Full Name / Username:</b></label>
-        <input type="text" id="user-display-name" placeholder="Enter your name">
+        <h2>Assessment Portal</h2>
+        <div style="display: flex; justify-content: space-between;">
+            <button id="mode-guest" class="btn-outline active" onclick="setMode('guest')">Guest Access</button>
+            <button id="mode-login" class="btn-outline" onclick="setMode('login')">User Login</button>
+        </div>
+
+        <div id="login-fields" class="hidden">
+            <input type="text" id="username" placeholder="Username / Email">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+
+        <label><b>Test Identity:</b></label>
+        <input type="text" id="test-name-input" placeholder="e.g. Zoology Quiz">
         
-        <label><b>Test Title:</b></label>
-        <input type="text" id="test-title-input" placeholder="e.g. Science Quiz #1">
+        <label><b>Number of Questions:</b></label>
+        <input type="number" id="num-input" value="2" min="1" max="5">
         
-        <button class="btn-primary" onclick="startTest()">LOG IN & START TEST</button>
-        <p style="text-align:center; font-size: 12px; color: #94a3b8; margin-top:15px;">Note: Any name creates a new session.</p>
+        <button class="btn-primary" onclick="validateAndStart()">INITIALIZE TEST</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
@@ -60,10 +62,9 @@
             <span>Q-Watch: <b id="q-clock" style="color:#fbbf24">0</b>s</span>
             <span>Total: <b id="g-clock">00:00</b></span>
         </div>
-        <div id="test-header" style="color: var(--primary); font-weight: bold; margin-bottom: 5px;"></div>
-        <div id="progress-text" style="color: #64748b; font-size: 14px; margin-bottom: 10px;"></div>
-        
-        <div class="q-text" id="question-body">Loading...</div>
+        <div id="display-test-name" style="color: var(--primary); font-weight: bold;"></div>
+        <h3 id="progress-text"></h3>
+        <div class="q-text" id="question-body"></div>
         
         <div class="options-grid">
             <button class="option-btn" id="opt-A" onclick="pick('A')"><b>A:</b> <span id="text-A"></span></button>
@@ -81,18 +82,16 @@
 
     <div id="verify-screen" class="hidden">
         <h2>Submit & Verify</h2>
-        <p>Please upload your answer sheet to unlock the final report.</p>
         <div style="border: 2px dashed var(--primary); padding: 30px; border-radius: 12px; background: #eff6ff; text-align: center;">
             <input type="file" id="image-input" accept="image/*">
             <button class="btn-primary" onclick="runAI()" style="margin-top:20px; background: var(--dark);">RUN AI VERIFICATION</button>
-            <div id="ai-loading" class="hidden" style="margin-top:15px; color: var(--primary); font-weight: bold;">AI is reading handwriting...</div>
+            <div id="ai-loading" class="hidden" style="margin-top:15px; color: var(--primary); font-weight: bold;">Reading Handwriting...</div>
         </div>
     </div>
 
     <div id="report-screen" class="hidden">
-        <h2 id="final-test-name">Report</h2>
-        <div id="final-user-details" style="font-weight: bold; color: #475569; margin-bottom: 20px;"></div>
-        
+        <h2 id="final-test-title"></h2>
+        <div id="final-user" style="font-weight: bold; color: #64748b; margin-bottom: 20px;"></div>
         <table class="report-table">
             <thead>
                 <tr>
@@ -100,126 +99,127 @@
                     <th>Manual</th>
                     <th>AI Scan</th>
                     <th>Time</th>
-                    <th>Match</th>
                 </tr>
             </thead>
             <tbody id="report-body"></tbody>
         </table>
-        
-        <button class="btn-primary" onclick="location.reload()" style="margin-top:30px; background: var(--dark);">Close & Logout</button>
+        <button class="btn-primary" onclick="location.reload()" style="margin-top:30px; background: var(--dark);">Restart Session</button>
     </div>
 </div>
 
 <script>
-    // --- CONFIGURE YOUR QUESTIONS HERE ---
-    const myQuestions = [
-        { q: "What is the capital of France?", a: "Paris", b: "London", c: "Berlin", d: "Rome", e: "Madrid" },
-        { q: "Which planet is known as the Red Planet?", a: "Venus", b: "Jupiter", c: "Mars", d: "Saturn", e: "Mercury" },
-        { q: "What is 5 + 7?", a: "10", b: "11", c: "12", d: "13", e: "14" },
-        { q: "Who wrote 'Romeo and Juliet'?", a: "Shakespeare", b: "Dickens", c: "Hemingway", d: "Twain", e: "Austen" },
-        { q: "Which gas do plants absorb?", a: "Oxygen", b: "Nitrogen", c: "Carbon Dioxide", d: "Helium", e: "Hydrogen" }
+    // Sample Questions - You can add more here!
+    const questions = [
+        { q: "Which animal is known as the King of the Jungle?", a: "Tiger", b: "Lion", c: "Elephant", d: "Giraffe", e: "Cheetah" },
+        { q: "What is the only mammal capable of true flight?", a: "Ostrich", b: "Flying Squirrel", c: "Bat", d: "Penguin", e: "Bee" },
+        { q: "How many legs does a spider have?", a: "4", b: "6", c: "8", d: "10", e: "12" },
+        { q: "Which is the largest land animal?", a: "Blue Whale", b: "Rhino", c: "African Elephant", d: "Hippo", e: "Giraffe" },
+        { q: "What do we call a baby kangaroo?", a: "Cub", b: "Joey", c: "Calf", d: "Foal", e: "Pup" }
     ];
 
-    let userName = "", testTitle = "";
-    let userAnswers = [], timePerQ = [];
-    let curIdx = 0, gSecs = 0, qSecs = 0;
-    let gTimer, qTimer;
+    let mode = 'guest', user = "Guest", testTitle = "", totalQs = 0;
+    let userAnswers = [], timeLogs = [], curIdx = 0, gSecs = 0, qSecs = 0, gTimer, qTimer;
 
-    function startTest() {
-        userName = document.getElementById('user-display-name').value || "Anonymous";
-        testTitle = document.getElementById('test-title-input').value || "Standard Test";
+    function setMode(m) {
+        mode = m;
+        document.getElementById('mode-guest').classList.toggle('active', m === 'guest');
+        document.getElementById('mode-login').classList.toggle('active', m === 'login');
+        document.getElementById('login-fields').classList.toggle('hidden', m === 'guest');
+    }
+
+    function validateAndStart() {
+        // Updated: Removed the hardcoded admin/1234 check
+        if (mode === 'login') {
+            user = document.getElementById('username').value || "User";
+            const pass = document.getElementById('password').value;
+            if (!user || !pass) return alert("Please enter both username and password.");
+        } else {
+            user = "Guest";
+        }
+
+        testTitle = document.getElementById('test-name-input').value || "General Test";
+        totalQs = Math.min(parseInt(document.getElementById('num-input').value), questions.length);
         
-        userAnswers = Array(myQuestions.length).fill("-");
-        timePerQ = Array(myQuestions.length).fill(0);
+        userAnswers = Array(totalQs).fill("-");
+        timeLogs = Array(totalQs).fill(0);
         
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        document.getElementById('test-header').innerText = testTitle;
+        document.getElementById('display-test-name').innerText = testTitle;
         
+        startTimers();
+        loadQ();
+    }
+
+    function startTimers() {
         gTimer = setInterval(() => {
             gSecs++;
             let m = Math.floor(gSecs/60).toString().padStart(2,'0');
             let s = (gSecs%60).toString().padStart(2,'0');
             document.getElementById('g-clock').innerText = `${m}:${s}`;
         }, 1000);
-
         qTimer = setInterval(() => {
             qSecs++;
             document.getElementById('q-clock').innerText = qSecs;
         }, 1000);
-
-        loadQ();
     }
 
     function loadQ() {
-        let qData = myQuestions[curIdx];
-        document.getElementById('progress-text').innerText = `Question ${curIdx + 1} of ${myQuestions.length}`;
-        document.getElementById('question-body').innerText = qData.q;
-        document.getElementById('text-A').innerText = qData.a;
-        document.getElementById('text-B').innerText = qData.b;
-        document.getElementById('text-C').innerText = qData.c;
-        document.getElementById('text-D').innerText = qData.d;
-        document.getElementById('text-E').innerText = qData.e;
+        let data = questions[curIdx];
+        document.getElementById('progress-text').innerText = `Question ${curIdx + 1} of ${totalQs}`;
+        document.getElementById('question-body').innerText = data.q;
+        document.getElementById('text-A').innerText = data.a;
+        document.getElementById('text-B').innerText = data.b;
+        document.getElementById('text-C').innerText = data.c;
+        document.getElementById('text-D').innerText = data.d;
+        document.getElementById('text-E').innerText = data.e;
         
         document.getElementById('prev-btn').disabled = (curIdx === 0);
-        document.getElementById('next-btn').innerText = (curIdx === myQuestions.length - 1) ? "FINISH" : "Next";
+        document.getElementById('next-btn').innerText = (curIdx === totalQs - 1) ? "FINISH" : "Next";
         
-        document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
         if(userAnswers[curIdx] !== "-") document.getElementById(`opt-${userAnswers[curIdx]}`).classList.add('selected');
     }
 
-    function pick(letter) {
-        userAnswers[curIdx] = letter;
-        loadQ();
-    }
+    function pick(l) { userAnswers[curIdx] = l; loadQ(); }
 
     function next() {
-        timePerQ[curIdx] += qSecs;
-        qSecs = 0; // RESET STOPWATCH
-        if (curIdx < myQuestions.length - 1) { curIdx++; loadQ(); } 
-        else { endQuiz(); }
+        timeLogs[curIdx] += qSecs;
+        qSecs = 0; // Fixed: Resets per question
+        if (curIdx < totalQs - 1) { curIdx++; loadQ(); } 
+        else { 
+            clearInterval(gTimer); clearInterval(qTimer);
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('verify-screen').classList.remove('hidden');
+        }
     }
 
     function prev() {
-        timePerQ[curIdx] += qSecs;
-        qSecs = 0; // RESET STOPWATCH
+        timeLogs[curIdx] += qSecs;
+        qSecs = 0; 
         if (curIdx > 0) { curIdx--; loadQ(); }
-    }
-
-    function endQuiz() {
-        clearInterval(gTimer); clearInterval(qTimer);
-        document.getElementById('quiz-screen').classList.add('hidden');
-        document.getElementById('verify-screen').classList.remove('hidden');
     }
 
     async function runAI() {
         const file = document.getElementById('image-input').files[0];
-        if (!file) return alert("Please upload a photo first!");
+        if (!file) return alert("Upload photo first.");
         document.getElementById('ai-loading').classList.remove('hidden');
 
         Tesseract.recognize(file, 'eng').then(({ data: { text } }) => {
-            const aiResults = text.match(/[A-E]/g) || [];
-            showFinalReport(aiResults);
+            const aiArr = text.match(/[A-E]/g) || [];
+            showFinal(aiArr);
         });
     }
 
-    function showFinalReport(aiArr) {
+    function showFinal(aiArr) {
         document.getElementById('verify-screen').classList.add('hidden');
         document.getElementById('report-screen').classList.remove('hidden');
-        document.getElementById('final-test-name').innerText = "Report: " + testTitle;
-        document.getElementById('final-user-details').innerText = "Student Name: " + userName;
+        document.getElementById('final-test-title').innerText = "Report: " + testTitle;
+        document.getElementById('final-user').innerText = "Logged as: " + user;
 
         let rows = "";
         userAnswers.forEach((ans, i) => {
-            let aiAns = aiArr[i] || "-";
-            let match = (ans === aiAns && ans !== "-");
-            rows += `<tr>
-                <td>${i+1}</td>
-                <td>${ans}</td>
-                <td>${aiAns}</td>
-                <td>${timePerQ[i]}s</td>
-                <td><span class="match-status ${match ? 'status-yes' : 'status-no'}">${match ? 'YES' : 'NO'}</span></td>
-            </tr>`;
+            rows += `<tr><td>${i+1}</td><td>${ans}</td><td>${aiArr[i] || '-'}</td><td>${timeLogs[i]}s</td></tr>`;
         });
         document.getElementById('report-body').innerHTML = rows;
     }
