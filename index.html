@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simplified Assessment Portal</title>
+    <title>Blank Response Tracker</title>
     <script src="https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --dark: #1e293b; }
+        :root { --primary: #2563eb; --success: #16a34a; --dark: #1e293b; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
+        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
         .hidden { display: none; }
         
         h2 { color: var(--dark); margin-bottom: 1.5rem; text-align: center; }
@@ -17,12 +17,13 @@
         
         button { padding: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 15px; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-primary:hover { background: #1d4ed8; }
         
         .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 25px; font-family: monospace; }
-        .q-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: var(--dark); }
-        .options-grid { display: grid; gap: 12px; margin-bottom: 25px; }
-        .option-btn { background: white; border: 2px solid #f1f5f9; text-align: left; padding: 16px; border-radius: 10px; transition: 0.3s; color: var(--dark); }
+        
+        .q-display { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 30px; color: var(--primary); }
+        
+        .options-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
+        .option-btn { background: white; border: 2px solid #f1f5f9; text-align: center; padding: 20px 0; border-radius: 10px; font-size: 1.2rem; }
         .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
         
         .nav-controls { display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 25px; }
@@ -40,15 +41,15 @@
 
 <div class="card">
     <div id="setup-screen">
-        <h2>Assessment Portal</h2>
+        <h2>New Assessment</h2>
         
         <label>Test Identity:</label>
-        <input type="text" id="test-title-input" placeholder="e.g. Zoology Final">
+        <input type="text" id="test-title-input" placeholder="e.g. Blank Test 01">
         
-        <label>Questions (Max 5):</label>
-        <input type="number" id="num-input" value="2" min="1" max="5">
+        <label>Number of Questions:</label>
+        <input type="number" id="num-input" value="10" min="1">
         
-        <button class="btn-primary" onclick="startTest()">INITIALIZE TEST</button>
+        <button class="btn-primary" onclick="startTest()">INITIALIZE TRACKER</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
@@ -56,16 +57,17 @@
             <span>Q-Watch: <b id="q-clock" style="color:#fbbf24">0</b>s</span>
             <span>Total: <b id="g-clock">00:00</b></span>
         </div>
-        <div id="test-header" style="color: var(--primary); font-weight: bold; margin-bottom: 10px;"></div>
         
-        <div class="q-text" id="question-body">Loading...</div>
+        <div id="test-header" style="text-align:center; color:#64748b; font-size:0.9rem; margin-bottom:5px;"></div>
+        <div class="q-display" id="q-number-display">Q1</div>
         
+        <p style="text-align:center; color:#94a3b8; margin-bottom:15px;">Select Response:</p>
         <div class="options-grid">
-            <button class="option-btn" id="opt-A" onclick="pick('A')"><b>A:</b> <span id="text-A"></span></button>
-            <button class="option-btn" id="opt-B" onclick="pick('B')"><b>B:</b> <span id="text-B"></span></button>
-            <button class="option-btn" id="opt-C" onclick="pick('C')"><b>C:</b> <span id="text-C"></span></button>
-            <button class="option-btn" id="opt-D" onclick="pick('D')"><b>D:</b> <span id="text-D"></span></button>
-            <button class="option-btn" id="opt-E" onclick="pick('E')"><b>E:</b> <span id="text-E"></span></button>
+            <button class="option-btn" id="opt-A" onclick="pick('A')">A</button>
+            <button class="option-btn" id="opt-B" onclick="pick('B')">B</button>
+            <button class="option-btn" id="opt-C" onclick="pick('C')">C</button>
+            <button class="option-btn" id="opt-D" onclick="pick('D')">D</button>
+            <button class="option-btn" id="opt-E" onclick="pick('E')">E</button>
         </div>
 
         <div class="nav-controls">
@@ -76,23 +78,23 @@
 
     <div id="verify-screen" class="hidden">
         <h2>Submit & Verify</h2>
-        <p style="text-align:center;">Upload your answer sheet photo to unlock the report.</p>
+        <p style="text-align:center; color:#64748b;">All responses recorded. Upload answer sheet to verify.</p>
         <div style="border: 2px dashed var(--primary); padding: 30px; border-radius: 12px; background: #eff6ff; text-align: center;">
             <input type="file" id="image-input" accept="image/*">
-            <button class="btn-primary" onclick="runAI()" style="margin-top:20px; background: var(--dark);">RUN AI VERIFICATION</button>
-            <div id="ai-loading" class="hidden" style="margin-top:15px; color: var(--primary); font-weight: bold;">AI scanning handwriting...</div>
+            <button class="btn-primary" onclick="runAI()" style="margin-top:20px; background: var(--dark);">COMPARE WITH AI SCAN</button>
+            <div id="ai-loading" class="hidden" style="margin-top:15px; color: var(--primary); font-weight: bold;">AI processing handwriting...</div>
         </div>
     </div>
 
     <div id="report-screen" class="hidden">
-        <h2 id="final-test-name">Report</h2>
+        <h2 id="final-test-name">Test Report</h2>
         <table class="report-table">
             <thead>
                 <tr>
                     <th>Q#</th>
                     <th>Manual</th>
                     <th>AI Scan</th>
-                    <th>Time</th>
+                    <th>Time Spent</th>
                     <th>Match</th>
                 </tr>
             </thead>
@@ -103,31 +105,21 @@
 </div>
 
 <script>
-    // Sample Test Content
-    const myQuestions = [
-        { q: "Which animal is known as the King of the Jungle?", a: "Tiger", b: "Elephant", c: "Lion", d: "Zebra", e: "Giraffe" },
-        { q: "Which of these is a mammal?", a: "Shark", b: "Whale", c: "Crocodile", d: "Eagle", e: "Snake" },
-        { q: "How many legs does a spider have?", a: "4", b: "6", c: "8", d: "10", e: "12" },
-        { q: "What is a group of lions called?", a: "Pack", b: "Herd", c: "Flock", d: "Pride", e: "School" },
-        { q: "Which bird cannot fly?", a: "Sparrow", b: "Ostrich", c: "Eagle", d: "Parrot", e: "Owl" }
-    ];
-
     let testTitle = "", totalQs = 0;
     let userAnswers = [], timePerQ = [];
     let curIdx = 0, gSecs = 0, qSecs = 0;
     let gTimer, qTimer;
 
     function startTest() {
-        testTitle = document.getElementById('test-title-input').value || "Unnamed Quiz";
-        let requestedQs = parseInt(document.getElementById('num-input').value);
-        totalQs = Math.min(requestedQs, myQuestions.length); // Prevent overflow
+        testTitle = document.getElementById('test-title-input').value || "Untitled Session";
+        totalQs = parseInt(document.getElementById('num-input').value) || 1;
         
         userAnswers = Array(totalQs).fill("-");
         timePerQ = Array(totalQs).fill(0);
         
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        document.getElementById('test-header').innerText = "Test: " + testTitle;
+        document.getElementById('test-header').innerText = testTitle;
         
         gTimer = setInterval(() => {
             gSecs++;
@@ -141,32 +133,32 @@
             document.getElementById('q-clock').innerText = qSecs;
         }, 1000);
 
-        loadQ();
+        updateUI();
     }
 
-    function loadQ() {
-        let qData = myQuestions[curIdx];
-        document.getElementById('question-body').innerText = qData.q;
-        document.getElementById('text-A').innerText = qData.a;
-        document.getElementById('text-B').innerText = qData.b;
-        document.getElementById('text-C').innerText = qData.c;
-        document.getElementById('text-D').innerText = qData.d;
-        document.getElementById('text-E').innerText = qData.e;
-        
+    function updateUI() {
+        document.getElementById('q-number-display').innerText = `Q${curIdx + 1}`;
         document.getElementById('prev-btn').disabled = (curIdx === 0);
         document.getElementById('next-btn').innerText = (curIdx === totalQs - 1) ? "FINISH" : "Next";
         
         document.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
-        if(userAnswers[curIdx] !== "-") document.getElementById(`opt-${userAnswers[curIdx]}`).classList.add('selected');
+        if(userAnswers[curIdx] !== "-") {
+            document.getElementById(`opt-${userAnswers[curIdx]}`).classList.add('selected');
+        }
     }
 
-    function pick(l) { userAnswers[curIdx] = l; loadQ(); }
+    function pick(l) { 
+        userAnswers[curIdx] = l; 
+        updateUI(); 
+    }
 
     function next() {
         timePerQ[curIdx] += qSecs;
         qSecs = 0;
-        if (curIdx < totalQs - 1) { curIdx++; loadQ(); } 
-        else { 
+        if (curIdx < totalQs - 1) { 
+            curIdx++; 
+            updateUI(); 
+        } else { 
             clearInterval(gTimer); clearInterval(qTimer);
             document.getElementById('quiz-screen').classList.add('hidden');
             document.getElementById('verify-screen').classList.remove('hidden');
@@ -176,27 +168,30 @@
     function prev() {
         timePerQ[curIdx] += qSecs;
         qSecs = 0;
-        if (curIdx > 0) { curIdx--; loadQ(); }
+        if (curIdx > 0) { 
+            curIdx--; 
+            updateUI(); 
+        }
     }
 
     async function runAI() {
         const file = document.getElementById('image-input').files[0];
-        if (!file) return alert("Please select your photo.");
+        if (!file) return alert("Select photo first.");
         document.getElementById('ai-loading').classList.remove('hidden');
 
         Tesseract.recognize(file, 'eng').then(({ data: { text } }) => {
             const aiFound = text.match(/[A-E]/g) || [];
             document.getElementById('verify-screen').classList.add('hidden');
             document.getElementById('report-screen').classList.remove('hidden');
-            document.getElementById('final-test-name').innerText = "Report: " + testTitle;
+            document.getElementById('final-test-name').innerText = "Results: " + testTitle;
 
             let rows = "";
             userAnswers.forEach((ans, i) => {
                 let aiAns = aiFound[i] || "-";
-                let match = (ans === aiAns);
+                let match = (ans === aiAns && ans !== "-");
                 rows += `<tr>
                     <td>${i+1}</td>
-                    <td>${ans}</td>
+                    <td><b>${ans}</b></td>
                     <td>${aiAns}</td>
                     <td>${timePerQ[i]}s</td>
                     <td><span class="status-tag ${match ? 'match' : 'diff'}">${match ? 'MATCH' : 'DIFF'}</span></td>
