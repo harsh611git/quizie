@@ -3,213 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Response Tracker</title>
+    <title>AI Verified Response Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { --primary: #2563eb; --success: #16a34a; --dark: #1e293b; --gray: #64748b; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 600px; min-height: 400px; display: flex; flex-direction: column; }
+        :root { --primary: #2563eb; --success: #16a34a; --dark: #1e293b; --gray: #64748b; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 600px; min-height: 450px; display: flex; flex-direction: column; }
         .hidden { display: none; }
         
-        h2 { color: var(--dark); text-align: center; margin-top: 0; }
-        label { font-weight: 600; color: var(--gray); display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="number"] { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
+        h2 { color: var(--dark); text-align: center; margin-top: 0; font-size: 1.8rem; }
+        label { font-weight: 600; color: var(--gray); display: block; margin-bottom: 8px; }
+        input { width: 100%; padding: 14px; margin-bottom: 25px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 1rem; box-sizing: border-box; }
         
-        /* Timers */
-        .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 12px 20px; border-radius: 10px; margin-bottom: 25px; font-family: monospace; font-size: 1.1rem; }
-        .q-num { font-size: 3rem; font-weight: 800; text-align: center; color: var(--primary); margin: 20px 0; }
+        /* Quiz Interface */
+        .timer-bar { display: flex; justify-content: space-between; background: var(--dark); color: white; padding: 14px 20px; border-radius: 12px; margin-bottom: 30px; font-family: 'Courier New', monospace; font-size: 1.1rem; }
+        .q-display { font-size: 3.5rem; font-weight: 800; text-align: center; color: var(--primary); margin: 30px 0; }
 
-        /* Options */
-        .options-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 30px; }
-        .option-btn { background: white; border: 2px solid #f1f5f9; padding: 20px 0; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .option-btn:hover { border-color: var(--primary); }
-        .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+        /* A-E Options Grid */
+        .options-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 40px; }
+        .option-btn { background: white; border: 2px solid #f1f5f9; padding: 25px 0; border-radius: 12px; font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: 0.2s; color: var(--dark); }
+        .option-btn:hover { border-color: var(--primary); background: #eff6ff; }
+        .option-btn.selected { background: var(--primary); color: white; border-color: var(--primary); transform: scale(1.05); }
 
-        /* Nav */
-        .nav-controls { display: flex; justify-content: space-between; margin-top: auto; padding-top: 20px; border-top: 1px solid #f1f5f9; }
-        button { padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-main { background: var(--primary); color: white; width: 100%; font-size: 1rem; }
-        .btn-prev { background: var(--gray); color: white; width: 45%; }
+        /* Navigation Controls */
+        .nav-controls { display: flex; justify-content: space-between; margin-top: auto; padding-top: 25px; border-top: 2px solid #f1f5f9; }
+        button.action { padding: 15px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem; }
+        .btn-start { background: var(--primary); color: white; width: 100%; }
+        .btn-prev { background: #e2e8f0; color: var(--gray); width: 45%; }
         .btn-next { background: var(--success); color: white; width: 45%; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* Table */
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .report-table th, .report-table td { padding: 12px; border: 1px solid #f1f5f9; text-align: center; }
-        .status { font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; }
+        /* Results & Verification */
+        .upload-zone { border: 3px dashed #cbd5e1; padding: 40px 20px; border-radius: 15px; background: #f1f5f9; text-align: center; margin: 20px 0; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; }
+        .report-table th { background: #f8fafc; color: var(--gray); padding: 12px; border-bottom: 2px solid #e2e8f0; }
+        .report-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 500; }
+        .status { font-weight: bold; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; }
         .match { background: #dcfce7; color: #166534; }
-        .mismatch { background: #fee2e2; color: #991b1b; }
-        
-        .upload-zone { border: 2px dashed var(--primary); padding: 30px; border-radius: 12px; background: #eff6ff; text-align: center; margin: 20px 0; }
+        .diff { background: #fee2e2; color: #991b1b; }
+        #ai-status { color: var(--primary); margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <div id="setup-screen">
-        <h2>Test Setup</h2>
-        <label>Test Name:</label>
-        <input type="text" id="test-name" placeholder="e.g. Weekly Quiz">
+        <h2>Assessment Portal</h2>
+        <label>Test Identity / Name:</label>
+        <input type="text" id="test-name" placeholder="e.g. Final Examination">
+        
         <label>Number of Questions:</label>
-        <input type="number" id="num-qs" value="5" min="1" max="100">
-        <button class="btn-main" onclick="initTracker()">START TRACKER</button>
+        <input type="number" id="num-qs" value="5" min="1">
+        
+        <button class="btn-start action" onclick="initTest()">INITIALIZE TEST</button>
     </div>
 
     <div id="quiz-screen" class="hidden">
         <div class="timer-bar">
-            <span>Q: <b id="q-clock" style="color:#fbbf24">0</b>s</span>
+            <span>Q-Timer: <b id="q-clock" style="color:#fbbf24">0</b>s</span>
             <span>Total: <b id="g-clock">00:00</b></span>
         </div>
-        <div id="active-test-name" style="text-align:center; color:var(--gray); font-weight:bold;"></div>
-        <div class="q-num" id="q-display">Q1</div>
+        <div id="active-title" style="text-align:center; color:var(--gray); font-weight:600; letter-spacing: 1px;"></div>
+        <div class="q-display" id="q-number">Q1</div>
         
         <div class="options-grid">
-            <button class="option-btn" onclick="setAns('A')" id="btn-A">A</button>
-            <button class="option-btn" onclick="setAns('B')" id="btn-B">B</button>
-            <button class="option-btn" onclick="setAns('C')" id="btn-C">C</button>
-            <button class="option-btn" onclick="setAns('D')" id="btn-D">D</button>
-            <button class="option-btn" onclick="setAns('E')" id="btn-E">E</button>
+            <button class="option-btn" onclick="record('A')" id="btn-A">A</button>
+            <button class="option-btn" onclick="record('B')" id="btn-B">B</button>
+            <button class="option-btn" onclick="record('C')" id="btn-C">C</button>
+            <button class="option-btn" onclick="record('D')" id="btn-D">D</button>
+            <button class="option-btn" onclick="record('E')" id="btn-E">E</button>
         </div>
 
         <div class="nav-controls">
-            <button class="btn-prev" id="prev-btn" onclick="changeQ(-1)">Previous</button>
-            <button class="btn-next" id="next-btn" onclick="changeQ(1)">Next</button>
+            <button class="btn-prev action" id="prev-btn" onclick="navigate(-1)">Previous</button>
+            <button class="btn-next action" id="next-btn" onclick="navigate(1)">Next</button>
         </div>
     </div>
 
     <div id="verify-screen" class="hidden">
         <h2>Submit & Verify</h2>
-        <p style="text-align:center; color:var(--gray);">All responses saved. Upload photo to check against AI.</p>
+        <p style="text-align:center; color:var(--gray);">Manual responses saved. Upload your paper for AI cross-check.</p>
         <div class="upload-zone">
-            <input type="file" id="file-input" accept="image/*">
-            <button class="btn-main" style="margin-top:20px; background:var(--dark);" onclick="processAI()">RUN AI SCAN</button>
-            <div id="ai-status" class="hidden" style="margin-top:15px; color:var(--primary); font-weight:bold;">Initializing AI...</div>
+            <input type="file" id="photo-input" accept="image/*" style="margin-bottom: 20px;">
+            <button class="btn-start action" style="background:var(--dark);" onclick="processAI()">START AI SCAN</button>
+            <div id="ai-status" class="hidden">Initializing AI Engine...</div>
         </div>
     </div>
 
     <div id="report-screen" class="hidden">
-        <h2 id="report-title">Final Report</h2>
-        <div id="summary-text" style="margin-bottom:15px; font-weight:bold;"></div>
+        <h2 id="rep-title">Performance Report</h2>
+        <div id="accuracy-summary" style="text-align:center; margin-bottom:20px; font-weight:bold; font-size:1.1rem;"></div>
         <table class="report-table">
             <thead>
                 <tr>
-                    <th>Q#</th>
+                    <th>#</th>
                     <th>Manual</th>
                     <th>AI Scan</th>
                     <th>Time</th>
-                    <th>Result</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody id="report-body"></tbody>
         </table>
-        <button class="btn-main" style="margin-top:30px; background:var(--dark);" onclick="location.reload()">RESTART SESSION</button>
+        <button class="btn-start action" style="margin-top:30px; background:var(--dark);" onclick="location.reload()">NEW SESSION</button>
     </div>
 </div>
 
 <script>
-    let testTitle = "", total = 0, cur = 0;
-    let answers = [], times = [];
-    let gSecs = 0, qSecs = 0;
-    let gInt, qInt;
+    let testTitle = "", totalQs = 0, curIdx = 0;
+    let manualAnswers = [], timeLogs = [];
+    let globalSecs = 0, questionSecs = 0;
+    let gInterval, qInterval;
 
-    function initTracker() {
+    function initTest() {
         testTitle = document.getElementById('test-name').value || "Untitled Test";
-        total = parseInt(document.getElementById('num-qs').value) || 1;
-        answers = Array(total).fill("-");
-        times = Array(total).fill(0);
+        totalQs = parseInt(document.getElementById('num-qs').value) || 1;
+        
+        manualAnswers = Array(totalQs).fill("-");
+        timeLogs = Array(totalQs).fill(0);
 
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
-        document.getElementById('active-test-name').innerText = testTitle;
+        document.getElementById('active-title').innerText = testTitle.toUpperCase();
 
-        // Timers
-        gInt = setInterval(() => {
-            gSecs++;
-            let m = Math.floor(gSecs/60).toString().padStart(2,'0');
-            let s = (gSecs%60).toString().padStart(2,'0');
+        // Start Global Timer
+        gInterval = setInterval(() => {
+            globalSecs++;
+            let m = Math.floor(globalSecs/60).toString().padStart(2,'0');
+            let s = (globalSecs%60).toString().padStart(2,'0');
             document.getElementById('g-clock').innerText = `${m}:${s}`;
         }, 1000);
 
-        qInt = setInterval(() => {
-            qSecs++;
-            document.getElementById('q-clock').innerText = qSecs;
+        // Start Question Timer
+        qInterval = setInterval(() => {
+            questionSecs++;
+            document.getElementById('q-clock').innerText = questionSecs;
         }, 1000);
 
-        refreshUI();
+        updateScreen();
     }
 
-    function refreshUI() {
-        document.getElementById('q-display').innerText = `Q${cur + 1}`;
-        document.getElementById('prev-btn').disabled = (cur === 0);
-        document.getElementById('next-btn').innerText = (cur === total - 1) ? "FINISH" : "Next";
+    function updateScreen() {
+        document.getElementById('q-number').innerText = `Q${curIdx + 1}`;
+        document.getElementById('prev-btn').disabled = (curIdx === 0);
+        document.getElementById('next-btn').innerText = (curIdx === totalQs - 1) ? "FINISH TEST" : "Next Question";
         
+        // Highlight selected
         document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-        if(answers[cur] !== "-") document.getElementById(`btn-${answers[cur]}`).classList.add('selected');
-    }
-
-    function setAns(l) { answers[cur] = l; refreshUI(); }
-
-    function changeQ(dir) {
-        times[cur] += qSecs;
-        qSecs = 0; // Reset question stopwatch
-        document.getElementById('q-clock').innerText = "0";
-
-        if(dir === 1 && cur === total - 1) {
-            finish();
-        } else {
-            cur += dir;
-            refreshUI();
+        if(manualAnswers[curIdx] !== "-") {
+            document.getElementById(`btn-${manualAnswers[curIdx]}`).classList.add('selected');
         }
     }
 
-    function finish() {
-        clearInterval(gInt); clearInterval(qInt);
+    function record(letter) {
+        manualAnswers[curIdx] = letter;
+        updateScreen();
+    }
+
+    function navigate(step) {
+        // Save time for current question
+        timeLogs[curIdx] += questionSecs;
+        questionSecs = 0;
+        document.getElementById('q-clock').innerText = "0";
+
+        if(step === 1 && curIdx === totalQs - 1) {
+            submitTest();
+        } else {
+            curIdx += step;
+            updateScreen();
+        }
+    }
+
+    function submitTest() {
+        clearInterval(gInterval); clearInterval(qInterval);
         document.getElementById('quiz-screen').classList.add('hidden');
         document.getElementById('verify-screen').classList.remove('hidden');
     }
 
     async function processAI() {
-        const file = document.getElementById('file-input').files[0];
-        if(!file) return alert("Select a photo first!");
+        const file = document.getElementById('photo-input').files[0];
+        if(!file) return alert("Please select an image file first.");
         
-        const status = document.getElementById('ai-status');
-        status.classList.remove('hidden');
+        const statusMsg = document.getElementById('ai-status');
+        statusMsg.classList.remove('hidden');
         
         try {
             const worker = await Tesseract.createWorker('eng', 1, {
-                logger: m => { if(m.status === 'recognizing text') status.innerText = `Analyzing: ${Math.round(m.progress*100)}%`; }
+                logger: m => {
+                    if(m.status === 'recognizing text') {
+                        statusMsg.innerText = `AI Progress: ${Math.round(m.progress * 100)}%`;
+                    }
+                }
             });
+
             const { data: { text } } = await worker.recognize(file);
-            const aiFound = text.toUpperCase().match(/[A-E]/g) || [];
+            
+            // Clean AI Output: Remove spaces and find A-E patterns
+            const cleaned = text.toUpperCase().replace(/\s+/g, '');
+            const aiFound = cleaned.match(/[A-E]/g) || [];
+            
             await worker.terminate();
-            showReport(aiFound);
-        } catch(e) {
-            alert("AI Error. Showing manual results.");
-            showReport([]);
+            renderReport(aiFound);
+        } catch (err) {
+            console.error(err);
+            alert("AI Scan failed. Showing manual results only.");
+            renderReport([]);
         }
     }
 
-    function showReport(aiArr) {
+    function renderReport(aiAnswers) {
         document.getElementById('verify-screen').classList.add('hidden');
         document.getElementById('report-screen').classList.remove('hidden');
-        document.getElementById('report-title').innerText = "Report: " + testTitle;
+        document.getElementById('rep-title').innerText = "Report: " + testTitle;
 
-        let rows = "", matches = 0;
-        answers.forEach((ans, i) => {
-            const aiAns = aiArr[i] || "-";
-            const ok = (ans === aiAns && ans !== "-");
-            if(ok) matches++;
-            rows += `<tr>
+        let tableHtml = "";
+        let matchCount = 0;
+
+        manualAnswers.forEach((ans, i) => {
+            const aiAns = aiAnswers[i] || "N/A";
+            const isMatch = (ans === aiAns && ans !== "-");
+            if(isMatch) matchCount++;
+
+            tableHtml += `<tr>
                 <td>${i+1}</td>
                 <td>${ans}</td>
-                <td>${aiAns}</td>
-                <td>${times[i]}s</td>
-                <td><span class="status ${ok?'match':'mismatch'}">${ok?'MATCH':'DIFF'}</span></td>
+                <td style="color:var(--primary)">${aiAns}</td>
+                <td>${timeLogs[i]}s</td>
+                <td><span class="status ${isMatch ? 'match' : 'diff'}">${isMatch ? 'MATCH' : 'DIFF'}</span></td>
             </tr>`;
         });
-        document.getElementById('report-body').innerHTML = rows;
-        document.getElementById('summary-text').innerText = `AI Match Accuracy: ${matches}/${total}`;
+
+        document.getElementById('report-body').innerHTML = tableHtml;
+        document.getElementById('accuracy-summary').innerHTML = `
+            Verification Score: <span style="color:var(--success)">${matchCount} / ${totalQs}</span><br>
+            <small style="color:var(--gray)">Total Session Time: ${document.getElementById('g-clock').innerText}</small>
+        `;
     }
 </script>
+
 </body>
 </html>
