@@ -20,14 +20,14 @@
         }
 
         [data-theme="dark"] {
-            /* Dark Mode Variables */
-            --bg: #0f172a;
-            --card-bg: #1e293b;
+            /* Pitch Black Dark Mode Variables */
+            --bg: #000000;
+            --card-bg: #000000;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --border: #334155;
-            --option-bg: #111827;
-            --option-hover: #1f2937;
+            --border: #262626;
+            --option-bg: #171717;
+            --option-hover: #262626;
             --primary: #3b82f6;
         }
 
@@ -54,6 +54,10 @@
             flex-direction: column;
             position: relative;
             transition: background 0.3s;
+        }
+
+        [data-theme="dark"] .card {
+            box-shadow: 0 0 0 1px var(--border); /* Clean border accent for pitch black layout */
         }
 
         .hidden { display: none !important; }
@@ -113,13 +117,16 @@
         .timer-bar { 
             display: flex; 
             justify-content: space-between; 
-            background: #111827; 
+            background: #171717; 
             color: white; 
             padding: 14px 20px; 
             border-radius: 12px; 
             margin-bottom: 30px; 
             font-family: monospace; 
             font-size: 1.1rem; 
+        }
+        [data-theme="dark"] .timer-bar {
+            border: 1px solid var(--border);
         }
         .q-display { font-size: 2.2rem; font-weight: 800; text-align: center; color: var(--primary); margin: 15px 0; }
 
@@ -158,7 +165,7 @@
         button.action { padding: 15px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; width: 45%; font-size: 1rem; }
         .btn-start { background: var(--primary); color: white; width: 100% !important; }
         .btn-prev { background: #e2e8f0; color: #475569; }
-        [data-theme="dark"] .btn-prev { background: #334155; color: #cbd5e1; }
+        [data-theme="dark"] .btn-prev { background: #171717; color: #cbd5e1; border: 1px solid var(--border); }
         .btn-next { background: var(--success); color: white; }
         button:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -237,14 +244,12 @@
         document.body.setAttribute('data-theme', targetTheme);
     }
 
-    // Helper to format raw seconds into standard MM:SS string
     function formatTimeDisplay(totalSeconds) {
         let m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
         let s = (totalSeconds % 60).toString().padStart(2, '0');
         return `${m}:${s}`;
     }
 
-    // Helper to format final log output text nicely
     function formatLogText(totalSeconds) {
         if (totalSeconds < 60) return `${totalSeconds}s`;
         let m = Math.floor(totalSeconds / 60);
@@ -260,13 +265,11 @@
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('quiz-screen').classList.remove('hidden');
 
-        // Global Timer
         gInterval = setInterval(() => {
             globalSecs++;
             document.getElementById('g-clock').innerText = formatTimeDisplay(globalSecs);
         }, 1000);
 
-        // Individual Question Timer
         qInterval = setInterval(() => {
             questionSecs++;
             document.getElementById('q-clock').innerText = formatTimeDisplay(questionSecs);
@@ -285,7 +288,6 @@
     function record(letter) { manualAnswers[curIdx] = letter; updateScreen(); }
 
     function navigate(step) {
-        // Log the active time spent into the array
         timeLogs[curIdx] += questionSecs;
         questionSecs = 0;
         document.getElementById('q-clock').innerText = "00:00";
